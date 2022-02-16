@@ -19,7 +19,7 @@ func CalculateK(expectedElements int, m uint) uint {
 	return uint(math.Ceil((float64(m) / float64(expectedElements)) * math.Log(2)))
 }
 
-func CreateHashFunctions(k uint,t uint) ([]hash.Hash32, uint) {
+func CreateHashFunctions(k uint, t uint) ([]hash.Hash32, uint) {
 	h := []hash.Hash32{}
 	if t == 0 {
 		t = uint(time.Now().Unix())
@@ -32,10 +32,11 @@ func CreateHashFunctions(k uint,t uint) ([]hash.Hash32, uint) {
 
 type BloomFilter struct {
 	M, K, T uint
-	H []hash.Hash32
-	BitSet []byte
+	H       []hash.Hash32
+	BitSet  []byte
 }
-func Constructor(expectedElements int, falsePositiveRate float64) BloomFilter{
+
+func Constructor(expectedElements int, falsePositiveRate float64) BloomFilter {
 	b := BloomFilter{}
 	b.M = CalculateM(expectedElements, falsePositiveRate)
 	b.K = CalculateK(expectedElements, b.M)
@@ -43,8 +44,8 @@ func Constructor(expectedElements int, falsePositiveRate float64) BloomFilter{
 	b.BitSet = make([]byte, b.M, b.M)
 	return b
 }
-func (b *BloomFilter) Add(element string){
-	for _, h := range b.H{
+func (b *BloomFilter) Add(element string) {
+	for _, h := range b.H {
 		h.Reset()
 		_, err := h.Write([]byte(element))
 		if err != nil {
@@ -55,7 +56,7 @@ func (b *BloomFilter) Add(element string){
 	}
 }
 func (b *BloomFilter) Search(element string) bool {
-	for _, h := range b.H{
+	for _, h := range b.H {
 		h.Reset()
 		_, err := h.Write([]byte(element))
 		if err != nil {
@@ -72,33 +73,33 @@ func (b *BloomFilter) Search(element string) bool {
 func (b *BloomFilter) Serialize(path string) {
 	b.H = nil
 	file, err := os.Create(path)
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 	}
 	encoder := gob.NewEncoder(file)
 	err = encoder.Encode(b)
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 	}
 	err = file.Close()
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 	}
 }
-func DeserializeBloomFilter(path string) BloomFilter{
+func DeserializeBloomFilter(path string) BloomFilter {
 	file, err := os.OpenFile(path, os.O_RDWR, 0777)
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 	}
 	b := BloomFilter{}
 	decoder := gob.NewDecoder(file)
 	err = decoder.Decode(&b)
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 	}
 	b.H, _ = CreateHashFunctions(b.K, b.T)
 	err = file.Close()
-	if err != nil{
+	if err != nil {
 		fmt.Println(err)
 	}
 	return b
