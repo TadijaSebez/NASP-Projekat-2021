@@ -1,12 +1,18 @@
 package SkipList
 
 import (
+	"SSTable"
 	"fmt"
+	"hash/crc32"
 	"math/rand"
 	"time"
 )
 
-const maxHeight = 32
+const MaxHeight = 32
+
+func CRC32(data []byte) uint32 {
+	return crc32.ChecksumIEEE(data)
+}
 
 type SkipList struct {
 	height int
@@ -14,12 +20,12 @@ type SkipList struct {
 }
 
 type SkipListNode struct {
-	key       string
-	value     []byte
-	tombstone bool
-	timestamp int64
+	Key       string
+	Value     []byte
+	Tombstone bool
+	Timestamp int64
 	prev      *SkipListNode
-	next      []*SkipListNode
+	Next      []*SkipListNode
 }
 
 func New(head *SkipListNode) *SkipList {
@@ -32,13 +38,13 @@ func New(head *SkipListNode) *SkipList {
 func (s *SkipList) IsKeyFree(key string) bool {
 	current := s.head
 	for i := s.height; i >= 0; i-- {
-		for ; current.next[i] != nil; current = current.next[i] {
-			next := current.next[i]
-			if next.key > key {
+		for ; current.Next[i] != nil; current = current.Next[i] {
+			next := current.Next[i]
+			if next.Key > key {
 				break
 			}
 		}
-		if current.key == key {
+		if current.Key == key {
 			return false
 		}
 	}
@@ -56,33 +62,33 @@ func (s *SkipList) Insert(key string, value []byte) {
 		}
 	}
 	node := &SkipListNode{
-		key:       key,
-		value:     value,
-		tombstone: false,
-		timestamp: time.Now().Unix(),
-		next:      make([]*SkipListNode, level+1),
+		Key:       key,
+		Value:     value,
+		Tombstone: false,
+		Timestamp: time.Now().Unix(),
+		Next:      make([]*SkipListNode, level+1),
 	}
 	current := s.head
 	for i := s.height; i >= 0; i-- {
-		for ; current.next[i] != nil; current = current.next[i] {
-			next := current.next[i]
-			if next.key > key {
+		for ; current.Next[i] != nil; current = current.Next[i] {
+			next := current.Next[i]
+			if next.Key > key {
 				break
 			}
 		}
 		if i > level {
 			continue
 		}
-		if current.key == key {
-			current.key = key
-			current.value = value
-			current.tombstone = false
-			current.timestamp = time.Now().Unix()
+		if current.Key == key {
+			current.Key = key
+			current.Value = value
+			current.Tombstone = false
+			current.Timestamp = time.Now().Unix()
 			return
 		}
 		if keyFree {
-			node.next[i] = current.next[i]
-			current.next[i] = node
+			node.Next[i] = current.Next[i]
+			current.Next[i] = node
 			node.prev = current
 		}
 	}
@@ -91,15 +97,15 @@ func (s *SkipList) Insert(key string, value []byte) {
 func (s *SkipList) Delete(key string) {
 	current := s.head
 	for i := s.height; i >= 0; i-- {
-		for ; current.next[i] != nil; current = current.next[i] {
-			next := current.next[i]
-			if next.key > key {
+		for ; current.Next[i] != nil; current = current.Next[i] {
+			next := current.Next[i]
+			if next.Key > key {
 				break
 			}
 		}
-		if current.key == key {
-			current.tombstone = true
-			current.timestamp = time.Now().Unix()
+		if current.Key == key {
+			current.Tombstone = true
+			current.Timestamp = time.Now().Unix()
 			return
 		}
 	}
@@ -107,21 +113,21 @@ func (s *SkipList) Delete(key string) {
 
 func (s *SkipList) Draw() {
 	ranks := make(map[string]int)
-	for i, node := 0, s.head.next[0]; node != nil; node = node.next[0] {
-		ranks[node.key] = i
+	for i, node := 0, s.head.Next[0]; node != nil; node = node.Next[0] {
+		ranks[node.Key] = i
 		i++
 	}
 
 	for level := s.height; level >= 0; level-- {
-		if s.head.next[level] == nil {
+		if s.head.Next[level] == nil {
 			continue
 		}
-		for i, node := 0, s.head.next[level]; node != nil; node = node.next[level] {
-			rank := ranks[node.key]
+		for i, node := 0, s.head.Next[level]; node != nil; node = node.Next[level] {
+			rank := ranks[node.Key]
 			for j := 0; j < rank-i; j++ {
 				print("--")
 			}
-			print(node.key, "-")
+			print(node.Key, "-")
 			i = rank + 1
 		}
 		println("\n")
@@ -129,26 +135,36 @@ func (s *SkipList) Draw() {
 	fmt.Println("")
 }
 
-func (s *SkipList) Read() {
-	for node := s.head; node != nil; node = node.next[0] {
-		print(node.key, "-")
+func (s *SkipList) GetArray() []SSTable.Record {
+	var recArray []SSTable.Record
+	for node := s.head; node != nil; node = node.Next[0] {
+		rec := SSTable.Record{
+			Crc:       CRC32(node.Value),
+			Key:       node.Key,
+			Value:     node.Value,
+			Tombstone: node.Tombstone,
+			Timestamp: uint64(node.Timestamp),
+		}
+		recArray = append(recArray, rec)
+
 	}
+	return recArray
 }
 
 func (s *SkipList) PrintNodeByKey(key string) {
 	current := s.head
 	for i := s.height; i >= 0; i-- {
-		for ; current.next[i] != nil; current = current.next[i] {
-			next := current.next[i]
-			if next.key > key {
+		for ; current.Next[i] != nil; current = current.Next[i] {
+			next := current.Next[i]
+			if next.Key > key {
 				break
 			}
 		}
-		if current.key == key {
-			println("Key:", current.key)
-			println("Value:", current.value)
-			println("Tombstone:", current.tombstone)
-			println("Timestamp:", current.timestamp)
+		if current.Key == key {
+			println("Key:", current.Key)
+			println("Value:", current.Value)
+			println("Tombstone:", current.Tombstone)
+			println("Timestamp:", current.Timestamp)
 		}
 	}
 }
