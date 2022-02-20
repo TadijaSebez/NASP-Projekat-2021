@@ -1,14 +1,14 @@
-package main
+package merkle
 
 import (
-"crypto/sha1"
-"encoding/hex"
-"fmt"
-"io/ioutil"
-"log"
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
+	"io/ioutil"
+	"log"
 
-_ "strconv"
-"strings"
+	_ "strconv"
+	"strings"
 )
 
 type Hash [20]byte
