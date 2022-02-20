@@ -69,27 +69,31 @@ func KreiranjeStabla(delovi []Hashovano) []Hashovano {
 	}
 }
 
-func printTree(node Node) {
-	printNode(node, 0)
+func printTree(node Node) string {
+	s := ""
+	s += printNode(node, 0)
+	return s
 }
 
-func printNode(node Node, level int) {
+func printNode(node Node, level int) string {
 
+	s := ""
 	fmt.Printf("(%d) %s %s\n", level, strings.Repeat(" ", level), node.hash())
 	if l, ok := node.left.(Node); ok {
 		printNode(l, level+1)
 	} else if l, ok := node.left.(Blok); ok {
-		fmt.Printf("(%d) %s %s (data: %s)\n", level+1, strings.Repeat(" ", level+1), l.hash(), l)
-
+		s += fmt.Sprintf("(%d) %s %s (data: %s)\n", level+1, strings.Repeat(" ", level+1), l.hash(), l)
 	}
 	if r, ok := node.right.(Node); ok {
 		printNode(r, level+1)
 	} else if r, ok := node.right.(Blok); ok {
-		fmt.Printf("(%d) %s %s (data: %s)\n", level+1, strings.Repeat(" ", level+1), r.hash(), r)
+		s += fmt.Sprintf("(%d) %s %s (data: %s)\n", level+1, strings.Repeat(" ", level+1), r.hash(), r)
 	}
+
+	return s
 }
 
 func main() {
-
-	printTree(KreiranjeStabla([]Hashovano{Blok("a"), Blok("b"), Blok("c"), Blok("d"), Blok("def"), Blok("f")})[0].(Node))
+	s := printTree(KreiranjeStabla([]Hashovano{Blok("a"), Blok("b"), Blok("c"), Blok("d"), Blok("def"), Blok("f")})[0].(Node))
+	fmt.Printf("%s", s)
 }
