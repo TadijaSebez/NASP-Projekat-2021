@@ -4,6 +4,8 @@ go 1.17
 
 require SSTable v0.0.0
 
+require LSMTree v0.0.0
+
 require Config v0.0.0
 
 require Bloomfilter v0.0.0 // indirect
@@ -15,6 +17,8 @@ require (
 
 replace SSTable => ../../src/SSTable
 
+replace LSMTree => ../../src/LSMTree
+
 replace Config => ../../src/Config
 
-replace Bloomfilter => ../../src/Bloomfilter
+replace Bloomfilter => ../../src/bloomfilter

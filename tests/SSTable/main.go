@@ -2,6 +2,7 @@ package main
 
 import (
 	"Config"
+	"LSMTree"
 	"SSTable"
 	"fmt"
 )
@@ -9,7 +10,7 @@ import (
 func main() {
 	config := Config.Config{}
 	config.LSMLevel = 4
-	SSTable.Compact(config)
+	LSMTree.Compact(config)
 	data := make([]SSTable.Record, 0)
 	data = append(data, SSTable.Record{0, 0, false, "A", make([]byte, 0)})
 	SSTable.CreateSSTable(data)
