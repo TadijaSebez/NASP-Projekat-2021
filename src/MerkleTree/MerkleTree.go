@@ -1,4 +1,4 @@
-package merkle
+package main
 
 import (
 	"crypto/sha1"
