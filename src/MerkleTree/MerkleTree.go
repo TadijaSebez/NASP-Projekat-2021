@@ -1,12 +1,14 @@
 package main
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
-	"fmt"
+"crypto/sha1"
+"encoding/hex"
+"fmt"
+"io/ioutil"
+"log"
 
-	_ "strconv"
-	"strings"
+_ "strconv"
+"strings"
 )
 
 type Hash [20]byte
@@ -72,6 +74,10 @@ func KreiranjeStabla(delovi []Hashovano) []Hashovano {
 func printTree(node Node) string {
 	s := ""
 	s += printNode(node, 0)
+	err := ioutil.WriteFile("MerkleTree.txt", []byte(s), 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
 	return s
 }
 
