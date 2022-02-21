@@ -28,6 +28,11 @@ func (hll *HyperLogLog) Add(hash uint32) {
 	}
 }
 
+func (hll *HyperLogLog) AddKey(key string) {
+	hash := CreateHash(key)
+	hll.Add(hash)
+}
+
 func (hll *HyperLogLog) GetCardinality() uint64 {
 	constant := 0.79402
 	invSum := float64(0)
