@@ -6,6 +6,8 @@ require Config v0.0.0
 
 require Bloomfilter v0.0.0
 
+require MerkleTree v0.0.0
+
 require (
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
@@ -14,3 +16,5 @@ require (
 replace Config => ../Config
 
 replace Bloomfilter => ../Bloomfilter
+
+replace MerkleTree => ../MerkleTree

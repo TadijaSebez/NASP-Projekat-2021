@@ -3,6 +3,7 @@ package LSMTree
 import (
 	"Bloomfilter"
 	"Config"
+	"MerkleTree"
 	"SSTable"
 )
 
@@ -102,7 +103,18 @@ func Merge(lsmLevel int, sstIndices []int) {
 	}
 	res.BloomFilter.Serialize(baseName + "filter")
 
-	// res.MerkleTree = ...
+	res.Data.Seek(0, 0)
+	bytes := make([][]byte, 0)
+	for {
+		record := SSTable.ReadRecord(res.Data)
+		if len(record.Key) == 0 {
+			break
+		}
+		bytes = append(bytes, record.ToBytes())
+	}
+	res.MerkleTree = MerkleTree.CreateMerkleTree(bytes)
+	MerkleTree.SerializeTree(*res.MerkleTree.Root, baseName+"metadata.txt")
+
 	SSTable.CloseSSTable(res)
 }
 

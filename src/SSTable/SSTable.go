@@ -3,6 +3,7 @@ package SSTable
 import (
 	"Bloomfilter"
 	"Config"
+	"MerkleTree"
 	"os"
 )
 
@@ -11,7 +12,7 @@ type SSTable struct {
 	Index        *os.File
 	IndexSummary *os.File
 	BloomFilter  Bloomfilter.BloomFilter
-	// MerkleTree ?
+	MerkleTree   MerkleTree.MerkleRoot
 }
 
 func CloseSSTable(sst SSTable) {
@@ -55,7 +56,12 @@ func CreateSSTable(data []Record) {
 
 	res.BloomFilter.Serialize(baseName + "filter")
 
-	// res.MerkleTree = ...
+	bytes := make([][]byte, 0)
+	for _, d := range data {
+		bytes = append(bytes, d.ToBytes())
+	}
+	res.MerkleTree = MerkleTree.CreateMerkleTree(bytes)
+	MerkleTree.SerializeTree(*res.MerkleTree.Root, baseName+"metadata.txt")
 
 	CloseSSTable(res)
 }
@@ -76,7 +82,7 @@ func DeleteSSTable(index int, lsmLevel int) {
 	DeleteFile(baseName + "index")
 	DeleteFile(baseName + "indexSummary")
 	DeleteFile(baseName + "filter")
-	// DeleteFile(baseName + "metadata")
+	DeleteFile(baseName + "metadata.txt")
 }
 
 func Find(index int, lsmLevel int, key string) (record Record, found bool) {
@@ -101,7 +107,7 @@ func Find(index int, lsmLevel int, key string) (record Record, found bool) {
 			break
 		}
 		offset, _ := ReadInt64(table.IndexSummary)
-		if key > key2 {
+		if key < key2 {
 			found = false
 			return
 		}

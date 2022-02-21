@@ -1,9 +1,11 @@
-package main
+package MerkleTree
 
 import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
+	"log"
 
 	_ "strconv"
 	"strings"
@@ -12,7 +14,7 @@ import (
 type Hash [20]byte
 
 type MerkleRoot struct {
-	root *Node
+	Root *Node
 }
 
 type Node struct {
@@ -29,26 +31,26 @@ func hash(data []byte) Hash {
 }
 
 type Hashovano interface {
-	hash() Hash
+	Hash() Hash
 }
 
-type Blok string
+type Blok []byte
 
-func (b Blok) hash() Hash {
-	return hash([]byte(b)[:])
+func (b Blok) Hash() Hash {
+	return hash(b[:])
 }
 
-func (n Node) hash() Hash {
+func (n Node) Hash() Hash {
 	var l, r [sha1.Size]byte
-	l = n.right.hash()
-	r = n.right.hash()
+	l = n.right.Hash()
+	r = n.right.Hash()
 	return hash(append(l[:], r[:]...))
 }
 
 type PrazanBlok struct {
 }
 
-func (_ PrazanBlok) hash() Hash {
+func (_ PrazanBlok) Hash() Hash {
 	return [20]byte{}
 }
 
@@ -69,10 +71,19 @@ func KreiranjeStabla(delovi []Hashovano) []Hashovano {
 	}
 }
 
-func printTree(node Node) string {
+func CreateMerkleTree(data [][]byte) MerkleRoot {
+	merkleTreeInput := make([]Hashovano, 0)
+	for _, bytes := range data {
+		merkleTreeInput = append(merkleTreeInput, Hashovano(Blok(bytes)))
+	}
+	node := KreiranjeStabla(merkleTreeInput)[0].(Node)
+	return MerkleRoot{Root: &node}
+}
+
+func SerializeTree(node Node, fn string) string {
 	s := ""
 	s += printNode(node, 0)
-	err := ioutil.WriteFile("MerkleTree.txt", []byte(s), 0666)
+	err := ioutil.WriteFile(fn, []byte(s), 0666)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,22 +93,17 @@ func printTree(node Node) string {
 func printNode(node Node, level int) string {
 
 	s := ""
-	fmt.Printf("(%d) %s %s\n", level, strings.Repeat(" ", level), node.hash())
+	s += fmt.Sprintf("(%d) %s %s\n", level, strings.Repeat(" ", level), node.Hash())
 	if l, ok := node.left.(Node); ok {
-		printNode(l, level+1)
+		s += printNode(l, level+1)
 	} else if l, ok := node.left.(Blok); ok {
-		s += fmt.Sprintf("(%d) %s %s (data: %s)\n", level+1, strings.Repeat(" ", level+1), l.hash(), l)
+		s += fmt.Sprintf("(%d) %s %s\n", level+1, strings.Repeat(" ", level+1), l.Hash())
 	}
 	if r, ok := node.right.(Node); ok {
-		printNode(r, level+1)
+		s += printNode(r, level+1)
 	} else if r, ok := node.right.(Blok); ok {
-		s += fmt.Sprintf("(%d) %s %s (data: %s)\n", level+1, strings.Repeat(" ", level+1), r.hash(), r)
+		s += fmt.Sprintf("(%d) %s %s\n", level+1, strings.Repeat(" ", level+1), r.Hash())
 	}
 
 	return s
-}
-
-func main() {
-	s := printTree(KreiranjeStabla([]Hashovano{Blok("a"), Blok("b"), Blok("c"), Blok("d"), Blok("def"), Blok("f")})[0].(Node))
-	fmt.Printf("%s", s)
 }
