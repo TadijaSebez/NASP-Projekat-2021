@@ -1,78 +1,63 @@
 package TokenBucket
 
 import (
+	"Config"
+	"encoding/binary"
 	"time"
 )
 
-type Token struct{}
-
 type TokenBucket struct {
-	Kolicina int
-	b        chan Token
-	t        *time.Ticker
-	s        chan Token
+	maxTokens     uint8
+	tokensLeft    uint8
+	resetInterval int64
+	nextResetTime int64
 }
 
-func NewTokenBucket(kolicina int) TokenBucket {
-	b := make(chan Token, kolicina)
-	return TokenBucket{
-		Kolicina: kolicina,
-		b:        b,
+func CreateTokenBucket(config Config.Config) *TokenBucket {
+	res := &TokenBucket{}
+	res.maxTokens = config.TokenNumber
+	res.tokensLeft = res.maxTokens
+	res.resetInterval = int64(config.BucketReset)
+	currentTime := time.Now().Unix()
+	res.nextResetTime = currentTime + res.resetInterval
+	return res
+}
+
+func (b *TokenBucket) CheckForReset() {
+	currentTime := time.Now().Unix()
+	if currentTime > b.nextResetTime {
+		b.tokensLeft = b.maxTokens
+		b.nextResetTime = currentTime + b.resetInterval
 	}
 }
 
-func (tb *TokenBucket) Stop() {
-	tb.s <- Token{}
-	<-tb.s
-
-	tb.drain()
+func (b *TokenBucket) HasMoreTokens() bool {
+	b.CheckForReset()
+	return b.tokensLeft > 0
 }
 
-func (tb *TokenBucket) IsEmpty() bool {
-	select {
-	case <-tb.b:
-		return false
-	default:
-		return true
-	}
+func (b *TokenBucket) GetTokensLeft() uint8 {
+	return b.tokensLeft
 }
 
-func (tb *TokenBucket) fill() {
-	for i := 0; i < tb.Kolicina; i++ {
-		select {
-		case tb.b <- Token{}:
-		default:
-		}
-	}
+func (b *TokenBucket) RemoveToken() {
+	b.tokensLeft--
 }
 
-func (tb *TokenBucket) drain() {
-	for i := 0; i < tb.Kolicina; i++ {
-		select {
-		case <-tb.b:
-		default:
-		}
-	}
+func (b *TokenBucket) ToBytes() []byte {
+	bytes := make([]byte, 18)
+	bytes[0] = b.maxTokens
+	bytes[1] = b.tokensLeft
+	binary.LittleEndian.PutUint64(bytes[2:], uint64(b.resetInterval))
+	binary.LittleEndian.PutUint64(bytes[10:], uint64(b.nextResetTime))
+	return bytes
 }
 
-func (tb *TokenBucket) Start() {
-	tb.t = time.NewTicker(time.Second)
-	tb.s = make(chan Token)
-
-	tb.fill()
-
-	go func() {
-		defer close(tb.s)
-		for {
-			select {
-			case <-tb.t.C:
-				tb.fill()
-			case <-tb.s:
-				tb.t.Stop()
-				return
-			}
-		}
-	}()
+func FromBytes(bytes []byte) *TokenBucket {
+	res := &TokenBucket{}
+	res.maxTokens = bytes[0]
+	res.tokensLeft = bytes[1]
+	res.resetInterval = int64(binary.LittleEndian.Uint64(bytes[2:10]))
+	res.nextResetTime = int64(binary.LittleEndian.Uint64(bytes[10:18]))
+	return res
 }
-
-
