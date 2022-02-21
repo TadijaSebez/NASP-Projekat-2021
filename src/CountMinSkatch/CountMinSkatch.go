@@ -1,6 +1,7 @@
 package CountMinSkatch
 
 import (
+	"encoding/binary"
 	"fmt"
 	"hash/fnv"
 	"math"
@@ -8,6 +9,8 @@ import (
 )
 
 type Sketch struct {
+	numRows   uint32
+	numCols   uint32
 	sk        [][]uint32
 	rowCounts []uint32
 }
@@ -19,12 +22,59 @@ func NewSketch(w, d int) *Sketch {
 
 	s := &Sketch{}
 
+	s.numRows = uint32(d)
+	s.numCols = uint32(w)
+
 	s.sk = make([][]uint32, d)
 	for i := 0; i < d; i++ {
 		s.sk[i] = make([]uint32, w)
 	}
 
 	s.rowCounts = make([]uint32, d)
+
+	return s
+}
+
+func (s *Sketch) ToBytes() []byte {
+	numBytes := 8 + s.numRows*s.numCols*4 + s.numRows*4
+	bytes := make([]byte, numBytes)
+	binary.LittleEndian.PutUint32(bytes[0:4], s.numRows)
+	binary.LittleEndian.PutUint32(bytes[4:8], s.numCols)
+	offset := 8
+	for i := uint32(0); i < s.numRows; i++ {
+		for j := uint32(0); j < s.numCols; j++ {
+			binary.LittleEndian.PutUint32(bytes[offset:offset+4], s.sk[i][j])
+			offset += 4
+		}
+	}
+	for i := uint32(0); i < s.numRows; i++ {
+		binary.LittleEndian.PutUint32(bytes[offset:offset+4], s.rowCounts[i])
+		offset += 4
+	}
+	return bytes
+}
+
+func FromBytes(bytes []byte) *Sketch {
+	s := &Sketch{}
+
+	s.numRows = binary.LittleEndian.Uint32(bytes[0:4])
+	s.numCols = binary.LittleEndian.Uint32(bytes[4:8])
+
+	offset := 8
+	s.sk = make([][]uint32, s.numRows)
+	for i := uint32(0); i < s.numRows; i++ {
+		s.sk[i] = make([]uint32, s.numCols)
+		for j := uint32(0); j < s.numCols; j++ {
+			s.sk[i][j] = binary.LittleEndian.Uint32(bytes[offset : offset+4])
+			offset += 4
+		}
+	}
+
+	s.rowCounts = make([]uint32, s.numRows)
+	for i := uint32(0); i < s.numRows; i++ {
+		s.rowCounts[i] = binary.LittleEndian.Uint32(bytes[offset : offset+4])
+		offset += 4
+	}
 
 	return s
 }
