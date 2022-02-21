@@ -4,8 +4,6 @@ import (
 	"Config"
 	"SSTable"
 	"SkipList"
-	"time"
-	"unsafe"
 )
 
 type Memtable struct {
@@ -16,36 +14,28 @@ type Memtable struct {
 
 func New(sl *SkipList.SkipList, config Config.Config) *Memtable {
 	return &Memtable{
-		skipList:        sl,
-		currentCapacity: 0,
-		maxCapacity:     config.MemtableSize,
+		skipList:    sl,
+		maxCapacity: config.MemtableSize,
 	}
 }
 
-func (m *Memtable) Insert(key string, value []byte) {
-	elemSize := uint64(unsafe.Sizeof(key) + unsafe.Sizeof(value))
-	if m.currentCapacity+elemSize > m.maxCapacity {
-		m.Flush(key, value)
+func (m *Memtable) Insert(key string, value []byte, tombstone bool) bool {
+	m.skipList.Insert(key, value, tombstone)
+	if m.skipList.GetSize() > m.maxCapacity {
+		m.Flush()
+		return true
 	} else {
-		m.currentCapacity += elemSize
-		m.skipList.Insert(key, value)
+		return false
 	}
 }
 
-func (m *Memtable) Delete(key string) {
-	m.skipList.Delete(key)
+func (m *Memtable) Get(key string) (bool, []byte) {
+	found, value := m.skipList.Get(key)
+	return found, value
 }
 
-func (m *Memtable) Flush(key string, value []byte) []SSTable.Record {
+func (m *Memtable) Flush() {
 	var recArray = m.skipList.GetArray() // get data
 
-	m.currentCapacity = uint64(unsafe.Sizeof(key) + unsafe.Sizeof(value)) // change skip list
-	m.skipList = SkipList.New(&SkipList.SkipListNode{
-		Key:       key,
-		Value:     value,
-		Tombstone: false,
-		Timestamp: time.Now().Unix(),
-		Next:      make([]*SkipList.SkipListNode, SkipList.MaxHeight)})
-	
-	return recArray // return data
+	SSTable.CreateSSTable(recArray)
 }

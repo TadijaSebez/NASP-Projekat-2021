@@ -16,6 +16,7 @@ func CRC32(data []byte) uint32 {
 
 type SkipList struct {
 	height int
+	size   uint64
 	head   *SkipListNode
 }
 
@@ -31,8 +32,13 @@ type SkipListNode struct {
 func New(head *SkipListNode) *SkipList {
 	return &SkipList{
 		height: 0,
+		size:   0,
 		head:   head,
 	}
+}
+
+func (s *SkipList) GetSize() uint64 {
+	return s.size
 }
 
 func (s *SkipList) IsKeyFree(key string) bool {
@@ -51,7 +57,7 @@ func (s *SkipList) IsKeyFree(key string) bool {
 	return true
 }
 
-func (s *SkipList) Insert(key string, value []byte) {
+func (s *SkipList) Insert(key string, value []byte, tombstone bool) {
 	keyFree := s.IsKeyFree(key)
 
 	level := 0
@@ -64,7 +70,7 @@ func (s *SkipList) Insert(key string, value []byte) {
 	node := &SkipListNode{
 		Key:       key,
 		Value:     value,
-		Tombstone: false,
+		Tombstone: tombstone,
 		Timestamp: time.Now().Unix(),
 		Next:      make([]*SkipListNode, level+1),
 	}
@@ -82,7 +88,7 @@ func (s *SkipList) Insert(key string, value []byte) {
 		if current.Key == key {
 			current.Key = key
 			current.Value = value
-			current.Tombstone = false
+			current.Tombstone = tombstone
 			current.Timestamp = time.Now().Unix()
 			return
 		}
@@ -92,9 +98,10 @@ func (s *SkipList) Insert(key string, value []byte) {
 			node.prev = current
 		}
 	}
+	s.size++
 }
 
-func (s *SkipList) Delete(key string) {
+func (s *SkipList) Get(key string) (bool, []byte) {
 	current := s.head
 	for i := s.height; i >= 0; i-- {
 		for ; current.Next[i] != nil; current = current.Next[i] {
@@ -104,11 +111,14 @@ func (s *SkipList) Delete(key string) {
 			}
 		}
 		if current.Key == key {
-			current.Tombstone = true
-			current.Timestamp = time.Now().Unix()
-			return
+			if current.Tombstone {
+				return false, nil
+			} else {
+				return true, current.Value
+			}
 		}
 	}
+	return false, nil
 }
 
 func (s *SkipList) Draw() {
@@ -137,7 +147,7 @@ func (s *SkipList) Draw() {
 
 func (s *SkipList) GetArray() []SSTable.Record {
 	var recArray []SSTable.Record
-	for node := s.head; node != nil; node = node.Next[0] {
+	for node := s.head.Next[0]; node != nil; node = node.Next[0] {
 		rec := SSTable.Record{
 			Crc:       CRC32(node.Value),
 			Key:       node.Key,
