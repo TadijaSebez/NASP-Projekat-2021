@@ -1,0 +1,5 @@
+wal_size: 500
+memtable_size: 35
+LSM_level: 4
+token_number: 250
+bucket_reset: 100
