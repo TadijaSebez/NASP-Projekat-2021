@@ -2,7 +2,6 @@ package SkipList
 
 import (
 	"SSTable"
-	"fmt"
 	"hash/crc32"
 	"math/rand"
 	"time"
@@ -119,30 +118,6 @@ func (s *SkipList) Get(key string) (bool, []byte) {
 		}
 	}
 	return false, nil
-}
-
-func (s *SkipList) Draw() {
-	ranks := make(map[string]int)
-	for i, node := 0, s.head.Next[0]; node != nil; node = node.Next[0] {
-		ranks[node.Key] = i
-		i++
-	}
-
-	for level := s.height; level >= 0; level-- {
-		if s.head.Next[level] == nil {
-			continue
-		}
-		for i, node := 0, s.head.Next[level]; node != nil; node = node.Next[level] {
-			rank := ranks[node.Key]
-			for j := 0; j < rank-i; j++ {
-				print("--")
-			}
-			print(node.Key, "-")
-			i = rank + 1
-		}
-		println("\n")
-	}
-	fmt.Println("")
 }
 
 func (s *SkipList) GetArray() []SSTable.Record {
