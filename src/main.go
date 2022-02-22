@@ -44,7 +44,6 @@ func (engine *KVEngine) Get(key string) []byte {
 	}
 	found, value = engine.cache.Get(key)
 	if found {
-		engine.cache.Put(key, value)
 		return value
 	}
 	record, found := SSTable.SearchSSTables(key, engine.config)
